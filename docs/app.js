@@ -166,6 +166,7 @@ readHash();
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>go(b.dataset.tab,""));
 $("#q").addEventListener("input",e=>{query=e.target.value;render()});
 $("#gear").onclick=settingsModal;
+if($("#help"))$("#help").onclick=openHelp;
 
 // у кнопки-значка при наведении — подсказка с её названием (из aria-label)
 document.addEventListener("mouseover",e=>{const b=e.target.closest&&e.target.closest("button[aria-label],a[aria-label]");if(b&&!b.title)b.title=b.getAttribute("aria-label")});
@@ -213,14 +214,14 @@ function renderPlaces(){
   if(cur){
     h+=`<nav class="crumbs"><button data-go="">Все места</button>${(p?chain(cur).slice(0,-1):[]).map(x=>`<span class="sep">›</span><button data-go="${x.id}">${esc(x.name)}</button>`).join("")}</nav>`;
     h+=p?`<div class="ptitle"><span class="em">${esc(p.emoji||"📦")}</span><div class="tx"><h1>${esc(p.name)}</h1>${p.note?`<span class="sub">${esc(p.note)}</span>`:""}</div><button class="btn" id="editPlace" aria-label="Изменить">✎</button></div>`
-        :`<div class="ptitle"><span class="em">❔</span><div class="tx"><h1>Без места</h1><span class="sub">Вещи, у которых место не указано или место удалено.</span></div></div>`;
+        :`<div class="ptitle"><span class="em">❔</span><div class="tx"><h1>Без места</h1></div></div>`;
     if(p&&p.kit)h+=kitPills(cur);
   }
   if(cur!=="none"){
     const loose=itemsIn("none").length;
     h+=`<section class="sec"><h2>${cur?"Внутри":"Места"} ${subs.length?`<span class="n">${subs.length}</span>`:""}</h2>`;
     if(subs.length||(!cur&&loose))h+=`<div class="list">${subs.map(placeRow).join("")}${!cur&&loose?`<button class="row" data-go="none"><span class="ic">❔</span><span class="tx"><span class="nm">Без места</span><span class="meta">${plural(loose,"вещь","вещи","вещей")}</span></span>${chevron}</button>`:""}</div>`;
-    else if(!cur)h+=`<div class="empty"><b>Пока пусто</b>Надиктуй Claude, что где лежит, — он подготовит файл, а ты загрузишь его через ⚙ → «Загрузить из файла». Или добавь место кнопкой ниже.</div>`;
+    else if(!cur)h+=`<div class="empty"><b>Пока пусто</b></div>`;
     h+=`<div class="btns"><button class="btn" id="addPlace">+ ${cur?"Место внутри":"Место"}</button></div></section>`;
   }
   if(cur){
@@ -243,7 +244,7 @@ function renderPlaces(){
 }
 function kitPills(kid){
   const cs=checkKit(kid);
-  if(!cs.length)return `<div class="hint">Это тревожная сумка. Добавь правила на вкладке «Проверка» (например, «одна зарядка для телефона»), и здесь будет видно, всё ли на месте.</div>`;
+  if(!cs.length)return `<div class="hint">Тревожная сумка · правил пока нет</div>`;
   return `<div class="inline">${cs.map(c=>`<span class="pill ${c.st}">${c.st==="ok"?"✓":c.st==="miss"?"нет:":"лишнее:"} ${esc(c.rule.name)}${c.st==="ok"?"":` (${c.have} из ${c.need})`}</span>`).join("")}</div>`;
 }
 
@@ -267,8 +268,8 @@ function renderCheck(){
     h+=pr?`<div class="summary bad">⚠ Есть что поправить: ${pr}</div>`:`<div class="summary ok">✓ Во всех тревожных сумках всё на месте</div>`;
   }
   h+=`<section class="sec"><h2>Тревожные сумки ${ks.length?`<span class="n">${ks.length}</span>`:""}</h2>`;
-  if(!ks.length)h+=`<div class="empty"><b>Тревожных сумок пока нет</b>Открой сумку → «Изменить» → галочка «Тревожная сумка». Тогда здесь будет видно, есть ли в ней всё нужное.</div>`;
-  else if(!rs.length)h+=`<div class="hint">Добавь правило ниже — например, «Зарядка для телефона», по слову «зарядк», нужно 1.</div>`;
+  if(!ks.length)h+=`<div class="empty"><b>Тревожных сумок пока нет</b></div>`;
+  else if(!rs.length)h+=`<div class="hint">Правил пока нет</div>`;
   for(const k of ks){
     const cs=checkKit(k.id);
     h+=`<div class="kit"><button class="kh" data-go="${k.id}"><span class="tx"><span class="nm">${esc(k.emoji||"🧳")} ${esc(k.name)}</span><span class="meta">${esc(k.parentId&&exists(k.parentId)?pathText(k.parentId):"")}</span></span>${chevron}</button>`;
@@ -289,13 +290,23 @@ function renderCheck(){
 
 function renderDates(){
   const its=dated();
-  let h=`<div class="hint">Поставь у вещи дату «Проверить срок» — в этот день в «Задачах» сама появится задача-напоминание. Поменяешь дату здесь — задача переедет.</div>`;
-  h+=its.length?`<div class="list">${its.map(i=>itemRow(i,true)).join("")}</div>`:`<div class="empty"><b>Сроков пока нет</b>Открой вещь (корм, продукты, лекарства) и укажи, когда её проверить.</div>`;
+  let h=``;
+  h+=its.length?`<div class="list">${its.map(i=>itemRow(i,true)).join("")}</div>`:`<div class="empty"><b>Сроков пока нет</b></div>`;
   main.innerHTML=h;wire();
 }
 
 /* ---------- editors ---------- */
 let onClose=null;
+/* ---------- справка: все пояснения — здесь, а не на экране ---------- */
+const HELP=[
+  ["Места и вещи","Места вкладываются друг в друга: дача → шкаф → сумка. «Где находится» пусто — место верхнего уровня (дача, квартира). Перевезла сумку в квартиру — выбери ей новое место, всё внутри переедет вместе с ней. Переложила вещь — выбери у неё новое место. Быстро добавить вещь — строка «Добавить вещь сюда…», можно «Мышка ×2». «Без места» — вещи, у которых место не указано или место удалено."],
+  ["Поиск","Строка поиска вверху находит вещь по названию во всех местах."],
+  ["Тревожные сумки","Открой сумку → «Изменить» → галочка «Тревожная сумка». На вкладке «Проверка» добавь правила — что обязательно должно быть, например «Зарядка для телефона», нужно 1. «Узнавать по словам в названии вещи» — через запятую, можно начало слова: «зарядк» найдёт и «зарядка», и «зарядку». Тогда видно, всё ли в сумке на месте."],
+  ["Сроки","Поставь у вещи (корм, продукты, лекарства) дату «Проверить срок» — в этот день в «Задачах» сама появится задача «Проверить срок: …». Поменяешь дату здесь — задача переедет."],
+  ["Загрузка из файла","Надиктуй Claude, что где лежит (места, вещи, правила), — он подготовит файл, а ты загрузишь его через ⚙ → «Загрузить из файла». Места с тем же путём не задвоятся, а вещи с тем же названием в том же месте пропустятся. Аккаунт тот же, что в «Задачах»."],
+];
+function openHelp(){openModal(`<h2>Справка</h2><div class="help">${HELP.map(([t,x])=>`<details><summary>${t}</summary><p>${x}</p></details>`).join("")}</div>
+  <div class="mact"><button class="btn" data-close>Закрыть</button></div>`)}
 function openModal(html,init){
   const root=$("#modalRoot");
   root.innerHTML=`<div class="ov"><div class="modal" role="dialog" aria-modal="true">${html}</div></div>`;
@@ -323,13 +334,10 @@ function itemModal(id,placeDefault){
       <div class="fld"><label for="iQty">Сколько штук</label><input id="iQty" type="number" min="0" step="1" inputmode="numeric" value="${+it.qty||0}"></div>
       <div class="fld"><label for="iDate">Проверить срок</label><input id="iDate" type="date" value="${esc(it.checkOn||"")}"></div>
     </div>
-    <div class="fld"><label for="iPlace">Где лежит</label><select id="iPlace"><option value="">— Без места —</option>${placeOptions(exists(it.placeId)?it.placeId:"")}</select>
-      <small>Переложила — выбери новое место.</small></div>
+    <div class="fld"><label for="iPlace">Где лежит</label><select id="iPlace"><option value="">— Без места —</option>${placeOptions(exists(it.placeId)?it.placeId:"")}</select></div>
     <div class="fld"><label for="iNote">Заметка</label><textarea id="iNote" placeholder="Например: белый, на 2 метра">${esc(it.note||"")}</textarea></div>
-    <small class="meta" id="iDateHint" style="visibility:${it.checkOn?"visible":"hidden"}">В этот день в «Задачах» появится напоминание «Проверить срок: ${esc(it.name||"…")}».</small>
     <div class="mact">${id?`<button class="btn danger left" id="iDel" aria-label="Удалить">🗑</button>`:""}<button class="btn" data-close>Отмена</button><button class="btn pri" id="iSave">Сохранить</button></div>`,m=>{
     const q=s=>m.querySelector(s);
-    q("#iDate").oninput=e=>q("#iDateHint").style.visibility=e.target.value?"visible":"hidden";
     q("#iSave").onclick=()=>{
       const name=q("#iName").value.trim();if(!name){q("#iName").focus();return}
       const data={name,qty:Math.max(0,Math.round(+q("#iQty").value||0)),placeId:q("#iPlace").value||null,note:q("#iNote").value.trim(),checkOn:q("#iDate").value||null};
@@ -348,9 +356,8 @@ function placeModal(id,parentDefault){
   openModal(`<h2>${id?"Место":"Новое место"}</h2>
     <div class="fld"><label for="pName">Название</label><input id="pName" value="${esc(p.name)}" placeholder="Например: Сумка от рабочего ноутбука" required></div>
     <div class="fld"><span class="lb">Значок</span><div class="emojis">${EMOJIS.map(x=>`<button type="button" data-em="${x}" aria-pressed="${x===p.emoji}">${x}</button>`).join("")}</div></div>
-    <div class="fld"><label for="pParent">Где находится</label><select id="pParent"><option value="">— Верхний уровень (дача, квартира…) —</option>${placeOptions(exists(p.parentId)?p.parentId:"",ex)}</select>
-      ${id?`<small>Перевезла сумку в квартиру — выбери новое место, всё внутри переедет вместе с ней.</small>`:""}</div>
-    <label class="chk"><input type="checkbox" id="pKit" ${p.kit?"checked":""}><span><b>Тревожная сумка</b><small>Проверять, что в ней есть всё обязательное (вкладка «Проверка»).</small></span></label>
+    <div class="fld"><label for="pParent">Где находится</label><select id="pParent"><option value="">— Верхний уровень (дача, квартира…) —</option>${placeOptions(exists(p.parentId)?p.parentId:"",ex)}</select></div>
+    <label class="chk"><input type="checkbox" id="pKit" ${p.kit?"checked":""}><span><b>Тревожная сумка</b></span></label>
     <div class="fld"><label for="pNote">Заметка</label><textarea id="pNote" placeholder="Например: стоит под кроватью">${esc(p.note||"")}</textarea></div>
     <div class="mact">${id?`<button class="btn danger left" id="pDel" aria-label="Удалить">🗑</button>`:""}<button class="btn" data-close>Отмена</button><button class="btn pri" id="pSave">Сохранить</button></div>`,m=>{
     const q=s=>m.querySelector(s);let em=p.emoji||"📦";
@@ -380,8 +387,7 @@ function ruleModal(id){
   openModal(`<h2>${id?"Правило":"Новое правило"}</h2>
     <p class="meta" style="margin:0">Что должно лежать в <b>каждой</b> тревожной сумке.</p>
     <div class="fld"><label for="rName">Что</label><input id="rName" value="${esc(r.name)}" placeholder="Зарядка для телефона"></div>
-    <div class="fld"><label for="rWords">Узнавать по словам в названии вещи</label><input id="rWords" value="${esc((r.words||[]).join(", "))}" placeholder="зарядк, кабель type-c">
-      <small>Через запятую. Можно начало слова: «зарядк» найдёт и «зарядка», и «зарядку».</small></div>
+    <div class="fld"><label for="rWords">Узнавать по словам в названии вещи</label><input id="rWords" value="${esc((r.words||[]).join(", "))}" placeholder="зарядк, кабель type-c"></div>
     <div class="fld"><label for="rNeed">Сколько нужно в каждой</label><input id="rNeed" type="number" min="1" step="1" inputmode="numeric" value="${+r.need||1}" style="max-width:120px"></div>
     <div class="fld"><span class="lb">Сейчас подходят</span><div class="meta" id="rPrev"></div></div>
     <div class="mact">${id?`<button class="btn danger left" id="rDel" aria-label="Удалить">🗑</button>`:""}<button class="btn" data-close>Отмена</button><button class="btn pri" id="rSave">Сохранить</button></div>`,m=>{
@@ -408,9 +414,8 @@ function autoWord(s){const w=norm(s).split(" ")[0]||"";return w.length>5?w.repla
 function settingsModal(){
   const n=Object.keys(S.items).length,k=Object.keys(S.places).length;
   openModal(`<h2>Настройки</h2>
-    <p class="meta" style="margin:0">Ты вошла как <b>${esc(user&&user.email)}</b> — это тот же аккаунт, что в «Задачах».</p>
+    <p class="meta" style="margin:0">Ты вошла как <b>${esc(user&&user.email)}</b></p>
     <div class="fld"><span class="lb">Загрузить из файла</span>
-      <small>Файл готовит Claude из твоих голосовых: места, вещи, правила.</small>
       <button class="btn" id="imp" style="align-self:flex-start" aria-label="Выбрать файл">📁</button>
 </div>
     <div class="fld"><span class="lb">Резервная копия</span><button class="btn" id="exp" style="align-self:flex-start">Скачать всё файлом</button></div>
@@ -420,7 +425,6 @@ function settingsModal(){
     q("#imp").onclick=()=>{if(!n&&!k&&!Object.keys(S.rules).length)return pick("replace");openModal(`<h2>Загрузить из файла</h2>
       <p class="meta" style="margin:0">Сейчас здесь ${plural(k,"место","места","мест")} и ${plural(n,"вещь","вещи","вещей")}. Что сделать с ними?</p>
       <div class="btns"><button class="btn" id="impAdd">Оставить и добавить новое</button><button class="btn danger" id="impRep">Удалить всё и загрузить файл</button></div>
-      <small>При добавлении места с тем же путём не задвоятся, а вещи с тем же названием в том же месте пропустятся.</small>
       <div class="mact"><button class="btn" data-close>Отмена</button></div>`,m2=>{
       m2.querySelector("#impAdd").onclick=()=>{closeModal();pick("add")};
       m2.querySelector("#impRep").onclick=()=>{closeModal();pick("replace")};

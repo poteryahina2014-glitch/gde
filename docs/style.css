@@ -147,3 +147,10 @@ button.row:hover{background:var(--surface-2)}
 mark{background:var(--warn-bg);color:inherit;border-radius:3px;padding:0 1px}
 @media (max-width:520px){.brand{font-size:17px}.tabs{flex:1 1 100%}.tabs button{flex:1;justify-content:center;padding:7px 6px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* справка */
+.help-btn{font-weight:700;font-size:17px;width:32px;height:32px;place-items:center;margin-left:auto}
+.help-btn+.gear{margin-left:0}
+.help details{border-top:1px solid var(--line);padding:8px 0}
+.help summary{cursor:pointer;font-weight:600}
+.help p{margin:6px 0 0;color:var(--muted);font-size:14px}
