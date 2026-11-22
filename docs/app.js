@@ -304,9 +304,10 @@ const HELP=[
   ["Тревожные сумки","Открой сумку → «Изменить» → галочка «Тревожная сумка». На вкладке «Проверка» добавь правила — что обязательно должно быть, например «Зарядка для телефона», нужно 1. «Узнавать по словам в названии вещи» — через запятую, можно начало слова: «зарядк» найдёт и «зарядка», и «зарядку». Тогда видно, всё ли в сумке на месте."],
   ["Сроки","Поставь у вещи (корм, продукты, лекарства) дату «Проверить срок» — в этот день в «Задачах» сама появится задача «Проверить срок: …». Поменяешь дату здесь — задача переедет."],
   ["Загрузка из файла","Надиктуй Claude, что где лежит (места, вещи, правила), — он подготовит файл, а ты загрузишь его через ⚙ → «Загрузить из файла». Места с тем же путём не задвоятся, а вещи с тем же названием в том же месте пропустятся. Аккаунт тот же, что в «Задачах»."],
+  ["Версия","Номер версии — внизу этой справки (дата и время выкладки). Если приложение давно открыто, а на сайте вышла новая версия, вверху появится «Есть новая версия» — нажми «Обновить»."],
 ];
 function openHelp(){openModal(`<h2>Справка</h2><div class="help">${HELP.map(([t,x])=>`<details><summary>${t}</summary><p>${x}</p></details>`).join("")}</div>
-  <div class="mact"><button class="btn" data-close>Закрыть</button></div>`)}
+  <div class="mact"><span class="left ver">${verText()}</span><button class="btn" data-close>Закрыть</button></div>`)}
 function openModal(html,init){
   const root=$("#modalRoot");
   root.innerHTML=`<div class="ov"><div class="modal" role="dialog" aria-modal="true">${html}</div></div>`;
@@ -499,3 +500,20 @@ function toast(msg){let el=$(".toast");if(!el){el=document.createElement("div");
 
 if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
 })();
+
+// Версия на экране и сверка с сайтом (ревизия 22.11.2026). Номер — в version.js: каждая выкладка ставит новый
+// (крючок перед коммитом не пустит изменение docs/ без него). На сайте новее — полоска «Есть новая версия».
+const verText=()=>"Версия "+(window.APP_VERSION||"?");
+async function checkVersion(){
+  if(!window.APP_VERSION||document.getElementById("updBar"))return;
+  try{
+    const m=(await (await fetch("version.js",{cache:"no-cache"})).text()).match(/APP_VERSION\s*=\s*"([^"]+)"/);
+    if(!m||m[1]===window.APP_VERSION)return;
+    const b=document.createElement("div");b.id="updBar";b.className="upd-bar";
+    b.innerHTML='Есть новая версия <button type="button">Обновить</button>';
+    b.querySelector("button").onclick=()=>location.reload();
+    document.body.appendChild(b);
+  }catch(e){}
+}
+checkVersion();
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")checkVersion()});
