@@ -365,10 +365,11 @@ const HELP=[
   ["Числа на вкладках","У «Проверки» — сколько всего поправить в тревожных сумках: и нехватка, и лишнее. У «Сроков» — у скольких вещей срок сегодня или уже истёк. На «Сроках» красное — истёк или сегодня, жёлтое — осталось 30 дней и меньше, серое — дальше."],
   ["Сроки","Поставь у вещи (корм, продукты, лекарства) дату «Годен до» — в «Задачах» сама появится памятка «Заменить: …» (доска 📌 → «Памятки»), в этот день она встанет в «Пора». Заменила — отметь ✓ там и впиши новый срок, он появится и здесь; без нового срока дата у вещи снимется. Поменяешь дату здесь — памятка переедет; снимешь дату или удалишь вещь — памятка уйдёт. Удалишь памятку — дата здесь снимется, вещь останется. Загрузка «заменить всё» стирает историю замен."],
   ["Загрузка из файла","Надиктуй Claude, что где лежит (места, вещи, правила), — он подготовит файл, а ты загрузишь его через ⚙ → «Загрузить из файла». Места с тем же путём не задвоятся, а вещи с тем же названием в том же месте пропустятся. Аккаунт тот же, что в «Задачах»."],
+  ["Ошибки","Если что-то сломалось, программа сама записывает это на устройство: «Ошибки: N» внизу этой справки. Там время и место сбоя, отказы базы и когда не было связи. «Скопировать» — и прислать Claude. Названий вещей и мест, почты и паролей в журнале нет. Хранится 30 последних ошибок за 30 дней, у каждого устройства свои; одинаковые складываются в одну строку «×2». Программа не открылась совсем — внизу пустого экрана появится полоска «Программа не запустилась» с той же кнопкой."],
   ["Версия","Номер версии — внизу этой справки (дата и время выкладки). Если приложение давно открыто, а на сайте вышла новая версия, вверху появится «Есть новая версия» — нажми «Обновить»."],
 ];
 function openHelp(){openModal(`<h2>Справка</h2><div class="help">${HELP.map(([t,x])=>`<details><summary>${t}</summary><p>${x}</p></details>`).join("")}</div>
-  <div class="mact"><span class="left ver">${verText()}</span><button class="btn" data-close>Закрыть</button></div>`,null,"helpwin")}
+  <div class="mact"><span class="left ver">${verText()}</span>${window.ERRLOG?ERRLOG.button():""}<button class="btn" data-close>Закрыть</button></div>`,null,"helpwin")}
 function openModal(html,init,cls){
   const root=$("#modalRoot"),had=!!root.firstChild;
   root.innerHTML=`<div class="ov"><div class="modal ${cls||""}" role="dialog" aria-modal="true">${html}</div></div>`;
@@ -665,7 +666,7 @@ function exportFile(){
 let tt=null;
 function toast(msg){let el=$(".toast");if(!el){el=document.createElement("div");el.className="toast";el.setAttribute("role","status");document.body.appendChild(el)}el.textContent=msg;clearTimeout(tt);tt=setTimeout(()=>el.remove(),/^Не удалось/.test(msg)?7000:2600)}
 
-if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(e=>console.error(e));
 })();
 
 // Версия на экране и сверка с сайтом (ревизия 22.11.2026). Номер — в version.js: каждая выкладка ставит новый
